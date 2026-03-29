@@ -180,11 +180,9 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return res.json(mapSaree(row));
 }));
 
-router.post("/", protect, requireAdmin, upload.array("images", 5), asyncHandler(async (req, res) => {
+router.post("/", protect, requireAdmin, asyncHandler(async (req, res) => {
   const db = getDb();
-  const uploadedImages = uploadImages(req.files || []);
-  const existingImages = parseExistingImages(req.body.existingImages);
-  const images = [...existingImages, ...uploadedImages].slice(0, 5);
+  const images = parseExistingImages(req.body.existingImages).slice(0, 5);
 
   const stock = Number(req.body.stock || 0);
   const inventoryStatus = stock > 0 ? "in_stock" : "sold";
@@ -217,7 +215,7 @@ router.post("/", protect, requireAdmin, upload.array("images", 5), asyncHandler(
   res.status(201).json(mapSaree(row));
 }));
 
-router.patch("/:id", protect, requireAdmin, upload.array("images", 5), asyncHandler(async (req, res) => {
+router.patch("/:id", protect, requireAdmin, asyncHandler(async (req, res) => {
   const db = getDb();
   const currentRow = await db.get("SELECT * FROM sarees WHERE id = ?", [req.params.id]);
   if (!currentRow) {
@@ -226,12 +224,7 @@ router.patch("/:id", protect, requireAdmin, upload.array("images", 5), asyncHand
   const saree = mapSaree(currentRow);
 
   const existingImages = parseExistingImages(req.body.existingImages);
-  const removedImages = saree.images.filter(
-    (storedImage) => !existingImages.some((existingImage) => existingImage.url === storedImage.url)
-  );
-
-  const uploadedImages = uploadImages(req.files || []);
-  const images = [...existingImages, ...uploadedImages].slice(0, 5);
+  const images = existingImages.slice(0, 5);
 
   const stock = Number(req.body.stock ?? saree.stock);
   const inventoryStatus = stock > 0 ? "in_stock" : "sold";
@@ -265,8 +258,6 @@ router.patch("/:id", protect, requireAdmin, upload.array("images", 5), asyncHand
       req.params.id,
     ]
   );
-  await deleteLocalImages(removedImages);
-
   const updatedRow = await db.get("SELECT * FROM sarees WHERE id = ?", [req.params.id]);
   res.json(mapSaree(updatedRow));
 }));
@@ -311,7 +302,7 @@ router.delete("/:id", protect, requireAdmin, asyncHandler(async (req, res) => {
   }
   const saree = mapSaree(row);
 
-  deleteLocalImages(saree.images);
+  deleteLocalImages(saree.images).catch(() => {});
   await db.run("DELETE FROM sarees WHERE id = ?", [req.params.id]);
   res.json({ message: "Saree deleted" });
 }));
