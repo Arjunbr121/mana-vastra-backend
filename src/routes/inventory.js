@@ -180,9 +180,11 @@ router.get("/:id", asyncHandler(async (req, res) => {
   return res.json(mapSaree(row));
 }));
 
-router.post("/", protect, requireAdmin, asyncHandler(async (req, res) => {
+router.post("/", protect, requireAdmin, upload.array("images", 5), asyncHandler(async (req, res) => {
   const db = getDb();
-  const images = parseExistingImages(req.body.existingImages).slice(0, 5);
+  const uploadedImages = await uploadImages(req.files || []);
+  const existingImages = parseExistingImages(req.body.existingImages);
+  const images = [...existingImages, ...uploadedImages].slice(0, 5);
 
   const stock = Number(req.body.stock || 0);
   const inventoryStatus = stock > 0 ? "in_stock" : "sold";
@@ -215,7 +217,7 @@ router.post("/", protect, requireAdmin, asyncHandler(async (req, res) => {
   res.status(201).json(mapSaree(row));
 }));
 
-router.patch("/:id", protect, requireAdmin, asyncHandler(async (req, res) => {
+router.patch("/:id", protect, requireAdmin, upload.array("images", 5), asyncHandler(async (req, res) => {
   const db = getDb();
   const currentRow = await db.get("SELECT * FROM sarees WHERE id = ?", [req.params.id]);
   if (!currentRow) {
@@ -224,7 +226,8 @@ router.patch("/:id", protect, requireAdmin, asyncHandler(async (req, res) => {
   const saree = mapSaree(currentRow);
 
   const existingImages = parseExistingImages(req.body.existingImages);
-  const images = existingImages.slice(0, 5);
+  const uploadedImages = await uploadImages(req.files || []);
+  const images = [...existingImages, ...uploadedImages].slice(0, 5);
 
   const stock = Number(req.body.stock ?? saree.stock);
   const inventoryStatus = stock > 0 ? "in_stock" : "sold";
