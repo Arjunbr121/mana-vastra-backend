@@ -14,20 +14,9 @@ import { seedAdmin, seedSampleSarees } from "./utils/seed.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://mana-vastra-website.vercel.app",
-  "https://mana-vastra-admin.vercel.app",
-].filter(Boolean);
-
 const corsOptions = {
-  origin: (origin, callback) => {
-    // allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS blocked: ${origin}`));
-  },
+  // reflect the request origin so all domains work with credentials
+  origin: (origin, callback) => callback(null, origin || "*"),
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
